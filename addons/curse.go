@@ -119,7 +119,7 @@ func createVersionFromFile(file File, flavor int) Version {
 	return Version{
 		GameVersion: file.GameVersions[0],
 		Flavor:      getFlavorFromGameID(flavor),
-		Date:        fmt.Sprintf("%d", file.FileDate.UTC().Unix()),
+		Date:        file.FileDate.UTC().Format(time.RFC3339),
 	}
 }
 
