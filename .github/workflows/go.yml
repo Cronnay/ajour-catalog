@@ -21,7 +21,7 @@ jobs:
         run: go build
 
       - name: Generate Catalog
-        run: ./catalog-go -capikey={{ secrets.CurseAPIKey }}
+        run: ./catalog-go -capikey={{ secrets.CURSEAPIKEY }}
 
       - name: Commit
         run: |
