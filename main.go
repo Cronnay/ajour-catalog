@@ -19,7 +19,6 @@ func init() {
 }
 
 func main() {
-	fmt.Println(*curseAPIKey)
 	if curseAPIKey == nil || *curseAPIKey == "" {
 		panic("No API key was provided")
 	}
