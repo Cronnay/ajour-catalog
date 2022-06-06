@@ -19,6 +19,11 @@ func init() {
 }
 
 func main() {
+	env := os.Getenv("APP_ENV")
+	if env == "dev" {
+		fmt.Println(*curseAPIKey)
+	}
+
 	if curseAPIKey == nil || *curseAPIKey == "" {
 		panic("No API key was provided")
 	}

@@ -5,6 +5,9 @@ on:
 
 name: Create catalog
 
+env:
+  APP_ENV: production
+
 jobs:
   fetch:
     runs-on: ubuntu-latest
@@ -23,6 +26,10 @@ jobs:
       - name: Generate Catalog
         run: ./catalog-go -capikey=${{ secrets.CURSE_API_KEY }}
 
+      - name: Test
+        run: |
+          jq '. | length' ./catalog-0.2.0.json
+
       - name: Commit
         run: |
           git config user.name github-actions
@@ -30,6 +37,3 @@ jobs:
           git add catalog-0.2.0.json
           git commit -m "chore: updated catalog"
           git push
-      - name: Test
-        run: |
-          jq '. | length' ./catalog-0.2.0.json
