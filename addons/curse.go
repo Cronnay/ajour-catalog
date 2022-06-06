@@ -20,7 +20,7 @@ func NewCurse(apiKey string) Backend {
 	}
 }
 
-func getFlavorFromGameID(gameID int) GameVersion {
+func getFlavorFromGameVersionTypeID(gameID int) GameVersion {
 	switch gameID {
 	case 73246:
 		return ClassicTBC
@@ -39,63 +39,79 @@ func (p CurseProvider) GetAddons() ([]Addon, error) {
 	addons := make([]Addon, 0, 0)
 	client := &http.Client{}
 
-	flavors := []int{73246, 67408, 517}
-	for _, flavor := range flavors {
-		index := 0
-		pageSize := 50
-		numberOfAddons := pageSize
+	index := 0
+	pageSize := 50
+	numberOfAddons := pageSize
 
-		for pageSize == numberOfAddons {
-			endpoint := fmt.Sprintf("https://api.curseforge.com/v1/mods/search?gameId=1&gameVersionTypeId=%d&pageSize=%d&index=%d", flavor, pageSize, index)
-			req, err := http.NewRequest("GET", endpoint, nil)
-			if err != nil {
-				panic(err.Error())
-			}
-			req.Header.Add("x-api-key", p.APIKey)
-			resp, err := client.Do(req)
-			if err != nil {
-				panic(err.Error())
-			}
-
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				panic(err.Error())
-			}
-
-			var data Mods
-			json.Unmarshal(body, &data)
-
-			for _, mod := range data.Data {
-				addon := createAddonFromMod(mod, flavor)
-				addons = append(addons, addon)
-			}
-			numberOfAddons = len(data.Data)
-			index += pageSize
-
+	for pageSize == numberOfAddons {
+		endpoint := fmt.Sprintf("https://api.curseforge.com/v1/mods/search?gameId=1&pageSize=%d&index=%d", pageSize, index)
+		req, err := http.NewRequest("GET", endpoint, nil)
+		if err != nil {
+			panic(err.Error())
 		}
-	}
+		req.Header.Add("x-api-key", p.APIKey)
+		resp, err := client.Do(req)
+		if err != nil {
+			panic(err.Error())
+		}
 
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		var data Mods
+		json.Unmarshal(body, &data)
+
+		for _, mod := range data.Data {
+			addon := createAddonFromMod(mod)
+			addons = append(addons, addon)
+		}
+		numberOfAddons = len(data.Data)
+		index += pageSize
+
+	}
 	return addons, nil
 }
 
-func createAddonFromMod(mod Data, flavor int) Addon {
-	files := []File{}
-	for _, file := range mod.LatestFiles {
-		if file.ReleaseType == 1 || file.ReleaseType == 2 {
+func (f File) getGameVersionTypeID() float64 {
+	if len(f.SortableGameVersions) > 0 {
+		if sortableGameVersion, exists := f.SortableGameVersions[0].(map[string]interface{}); exists {
+			if gameVersionTypeID, gameVersionTypeIDExists := sortableGameVersion["gameVersionTypeId"]; gameVersionTypeIDExists {
+				if id, isCorrectType := gameVersionTypeID.(float64); isCorrectType {
+					return id
+				}
+			}
+		}
+	}
+	return 0
+}
+
+func createAddonFromMod(mod Data) Addon {
+	files := []LatestFilesIndexes{}
+	for _, file := range mod.LatestFilesIndexes {
+		if (file.ReleaseType == 1 || file.ReleaseType == 2) && file.GameVersionTypeID > 0 {
 			files = append(files, file)
 		}
 	}
 
-	versions := []Version{}
+	versions := make([]Version, 0)
+	mapOfVersions := make(map[GameVersion]Version, 0)
 	for _, file := range files {
-		shouldFilter := false
-		for _, f := range files {
-			shouldFilter = f.GameID == file.GameID && f.ID > file.ID
+		currentFlavor := getFlavorFromGameVersionTypeID(file.GameVersionTypeID)
+		if v, exists := mapOfVersions[currentFlavor]; exists {
+			if file.FileID > v.fileID {
+				ts := getTimestampFromLatestFiles(file.FileID, mod.LatestFiles)
+				mapOfVersions[currentFlavor] = Version{Flavor: currentFlavor, GameVersion: file.GameVersion, Date: ts}
+			}
+		} else {
+			ts := getTimestampFromLatestFiles(file.FileID, mod.LatestFiles)
+			mapOfVersions[currentFlavor] = Version{Flavor: currentFlavor, GameVersion: file.GameVersion, Date: ts, fileID: file.FileID}
 		}
+	}
 
-		if !shouldFilter {
-			versions = append(versions, createVersionFromFile(file, flavor))
-		}
+	for _, v := range mapOfVersions {
+		versions = append(versions, v)
 	}
 
 	categories := make([]string, 0, 0)
@@ -115,11 +131,20 @@ func createAddonFromMod(mod Data, flavor int) Addon {
 	}
 }
 
-func createVersionFromFile(file File, flavor int) Version {
+func getTimestampFromLatestFiles(fileID int, files []File) string {
+	for _, f := range files {
+		if fileID == f.ID {
+			return f.FileDate.UTC().Format(time.RFC3339Nano)
+		}
+	}
+	return ""
+}
+
+func createVersionFromFile(file File) Version {
 	return Version{
 		GameVersion: file.GameVersions[0],
-		Flavor:      getFlavorFromGameID(flavor),
-		Date:        file.FileDate.UTC().Format(time.RFC3339),
+		Flavor:      getFlavorFromGameVersionTypeID(int(file.getGameVersionTypeID())),
+		Date:        file.FileDate.UTC().Format(time.RFC3339Nano),
 	}
 }
 

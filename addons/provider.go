@@ -17,6 +17,7 @@ type Version struct {
 	Flavor      GameVersion `json:"flavor"`
 	GameVersion string      `json:"game_version"`
 	Date        string      `json:"date"`
+	fileID      int
 }
 
 // Source is an enum of available sources to download from
