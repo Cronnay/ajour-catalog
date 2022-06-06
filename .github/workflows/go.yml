@@ -1,0 +1,35 @@
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
+name: Create catalog
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    name: Fetch addon data
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+
+      - name: Build
+        run: go build
+
+      - name: Generate Catalog
+        run: ./catalog-go -capikey={{ secrets.CurseAPIKey }}
+
+      - name: Commit
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add catalog-0.2.0.json
+          git commit -m "chore: updated catalog"
+          git push
+      - name: Test
+        run: |
+          jq '. | length' ./catalog-0.2.0.json
