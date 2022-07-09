@@ -35,7 +35,7 @@ func getFlavorFromGameVersionTypeID(gameID int) GameVersion {
 }
 
 //GetAddons will fetch all available addons from Curse for the three flavors
-func (p CurseProvider) GetAddons() ([]Addon, error) {
+func (p CurseProvider) GetAddons(c chan []Addon) {
 	addons := make([]Addon, 0, 0)
 	client := &http.Client{}
 
@@ -71,7 +71,7 @@ func (p CurseProvider) GetAddons() ([]Addon, error) {
 		index += pageSize
 
 	}
-	return addons, nil
+	c <- addons
 }
 
 func (f File) getGameVersionTypeID() float64 {

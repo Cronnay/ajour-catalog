@@ -48,5 +48,5 @@ const (
 
 // Backend is an interface to implement getting addons
 type Backend interface {
-	GetAddons() ([]Addon, error)
+	GetAddons(c chan []Addon)
 }

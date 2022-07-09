@@ -1,0 +1,26 @@
+@url=https://api.curseforge.com/v1
+@api_key=$2a$10$WfhJnXtmEI6YWTlyHy4D7.dELZVLOmyrdR4yyDH3djw1YZ7ipHS/u
+
+
+### Get all games
+GET {{url}}/games
+x-api-key: {{api_key}}
+
+### Get versions
+
+GET {{url}}/games/1/version-types
+x-api-key: {{api_key}}
+
+
+###
+GET {{url}}/mods/65387
+x-api-key: {{api_key}}
+
+### Get Tukui Addons
+@tukui=https://www.tukui.org/api.php
+
+GET {{tukui}}?ui=elvui
+###
+GET {{tukui}}?ui=tukui
+###
+GET {{tukui}}?classic-tbc-addons=all

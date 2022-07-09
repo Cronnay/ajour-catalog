@@ -27,15 +27,21 @@ func main() {
 	if curseAPIKey == nil || *curseAPIKey == "" {
 		panic("No API key was provided")
 	}
-	c := addons.NewCurse(*curseAPIKey)
-	curseAddons, curseError := c.GetAddons()
-	if curseError != nil {
-		fmt.Println(curseError)
-		panic(curseError)
-	}
-
+	addonsChannel := make(chan []addons.Addon, 0)
 	allAddons := make([]addons.Addon, 0)
-	allAddons = append(allAddons, curseAddons...)
+
+	//Curse addons
+	c := addons.NewCurse(*curseAPIKey)
+	go c.GetAddons(addonsChannel)
+	//Tukui addons
+	t := addons.NewTukui()
+	go t.GetAddons(addonsChannel)
+
+	providers := []addons.Source{addons.Tukui, addons.Curse}
+	for range providers {
+		providerAddons := <-addonsChannel
+		allAddons = append(allAddons, providerAddons...)
+	}
 
 	addonsAsBytes, jsonErr := json.Marshal(allAddons)
 	if jsonErr != nil {
